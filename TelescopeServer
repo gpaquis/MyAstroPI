@@ -1,0 +1,83 @@
+#! /bin/bash
+#
+# TelescopeServer    init script for TelescopeServer
+#
+#        Written by Loops <>
+
+### BEGIN INIT INFO
+# Provides:          TelescopeServer
+# Required-Start:    $network $remote_fs
+# Required-Stop:     $network $remote_fs
+# Should-Start:
+# Should-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Run TelescopeServer for Stellarium 
+# Description:       This daemon allows communication between Stellarium Client 
+and Telescope Server to pilot Nextar/Lx200
+### END INIT INFO
+
+  . /lib/lsb/init-functions
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+SCRIPT="$0"
+if [ -e '/usr/local/etc/TelescopeServer.conf' ]; then
+  . /usr/local/etc/TelescopeServer.conf
+else
+  PORT="10001"
+  DAEMON=`which /usr/local/bin/TelescopeServerDummy`
+  SERIAL="/dev/ttyUSB0"
+fi
+
+# check if binary exists
+if [ ! $DAEMON ]; then
+  echo "$DAEMON binary does not exist"
+  exit 1;
+fi
+
+#DAEMON="/usr/local/bin/TelescopeServerDummy"
+#PORT=10001
+#SERIAL="/dev/ttyUSB0"
+DAEMON_OPTION="$PORT $SERIAL"
+NAME=TelescopeServer
+DESC="TelescopeServer For Stellarium"
+PIDFILE=/run/$NAME.pid
+
+test -f $DAEMON || exit 0
+
+
+case "$1" in
+  start)
+    log_daemon_msg "Starting system $NAME Daemon"
+    start-stop-daemon --background --name $NAME --start --quiet --exec $DAEMON $
+DAEMON_OPTION
+    log_end_msg $?
+    ;;
+  stop)
+    log_daemon_msg "Stopping system $NAME Daemon"
+    start-stop-daemon --name $NAME --stop --retry 5 --quiet --name $NAME
+    log_end_msg $?
+    ;;
+  force-stop)
+    stop
+    killall -q $NAME || true
+    sleep 2
+    killall -q -9 $NAME || true
+    ;;
+  restart|reload|force-reload)
+    stop
+    sleep 1
+    start
+    ;;
+  status)
+      status_of_proc "$NAME" "$DAEMON" "system-wide $NAME" && exit 0 || exit $?
+        ;;    
+  *)
+    N=/etc/init.d/$NAME
+    echo "Usage: $N {start|stop|restart|reload|force-reload|status}" >&2
+    exit 1
+    ;;
+esac
+
+exit 0
